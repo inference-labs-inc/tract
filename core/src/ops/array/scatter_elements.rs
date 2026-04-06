@@ -1,4 +1,5 @@
 use crate::internal::*;
+use crate::prelude::DatumType;
 use ndarray::*;
 
 #[derive(Debug, Clone, new, Hash, PartialEq, Eq)]
@@ -53,6 +54,22 @@ impl EvalOp for ScatterElements {
         let (data, indices, updates) = args_3!(inputs);
         let indices = indices.cast_to::<i64>()?;
         let indices = indices.to_plain_array_view::<i64>()?;
+        let (data, updates) =
+            if data.datum_type() == DatumType::TDim || updates.datum_type() == DatumType::TDim {
+                let data = if data.datum_type() == DatumType::TDim {
+                    data.cast_to::<i64>()?.into_owned().into_tvalue()
+                } else {
+                    data
+                };
+                let updates = if updates.datum_type() == DatumType::TDim {
+                    updates.cast_to::<i64>()?.into_owned().into_tvalue()
+                } else {
+                    updates
+                };
+                (data, updates)
+            } else {
+                (data, updates)
+            };
         if data.datum_type() != updates.datum_type() {
             bail!(
                 "Data and update must be of the same type, got {:?} and {:?}",
